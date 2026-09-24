@@ -1,0 +1,106 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum MarketplaceCode {
+  SHOPEE
+  TIKTOK
+}
+
+enum ConnectionStatus {
+  CONNECTED
+  DISCONNECTED
+  EXPIRED
+  ERROR
+}
+
+model Marketplace {
+  id    Int             @id @default(autoincrement())
+  code  MarketplaceCode @unique
+  name  String
+  shops Shop[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("marketplaces")
+}
+
+model Shop {
+  id                Int              @id @default(autoincrement())
+  marketplaceId     Int
+  marketplaceShopId String
+  name              String
+  region            String?
+  status            ConnectionStatus @default(DISCONNECTED)
+
+  marketplace Marketplace         @relation(fields: [marketplaceId], references: [id])
+  account     MarketplaceAccount?
+  orders      Order[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([marketplaceId, marketplaceShopId])
+  @@map("shops")
+}
+
+model MarketplaceAccount {
+  id             Int              @id @default(autoincrement())
+  shopId         Int              @unique
+  accessToken    String?
+  refreshToken   String?
+  tokenExpiresAt DateTime?
+  scopes         Json?
+  status         ConnectionStatus @default(DISCONNECTED)
+
+  shop Shop @relation(fields: [shopId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("marketplace_accounts")
+}
+
+model Order {
+  id                 Int      @id @default(autoincrement())
+  shopId             Int
+  marketplaceOrderId String
+  marketplaceStatus  String
+  buyerUsername      String?
+  totalAmount        Decimal?
+  currency           String?
+
+  shop  Shop        @relation(fields: [shopId], references: [id])
+  items OrderItem[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([shopId, marketplaceOrderId])
+  @@map("orders")
+}
+
+model OrderItem {
+  id                Int      @id @default(autoincrement())
+  orderId           Int
+  marketplaceItemId String?
+  marketplaceSkuId  String?
+  sellerSku         String?
+  productName       String
+  variantName       String?
+  quantity          Int
+  salePrice         Decimal?
+
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("order_items")
+}
